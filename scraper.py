@@ -175,8 +175,12 @@ def main():
         html = fetch_page(current_url)
 
         if html is None:
-            print(f"Stopping: unable to fetch page {page_number}.")
-            break
+            print(f"Scraping failed on page {page_number}.")
+            print("No output files will be written.")
+            print(f"Pages fetched: {pages_fetched}")
+            print(f"Quotes extracted before failure: {len(all_quotes)}")
+            print("Files written: 0")
+            return
 
         pages_fetched += 1
 
