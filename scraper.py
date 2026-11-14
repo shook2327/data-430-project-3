@@ -6,6 +6,12 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
+import csv
+import json
+from pathlib import Path 
+
+import yaml
+
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -16,6 +22,7 @@ REQUEST_DELAY = 1.5
 MAX_RETRIES = 2
 RETRY_DELAY = 2
 
+OUTPUT_DIR = Path(__file__).resolve().parent / "output"
 
 HEADERS = {
     "User-Agent": "DATA430-Project3-Educational-WebScraper/1.0"
@@ -84,6 +91,73 @@ def parse_quotes(soup, page_number, scraped_at):
     return extracted_quotes
 
 
+def write_csv(quotes):
+    """Write quotes to a CSV file with semicolon-separated tags."""
+    file_path = OUTPUT_DIR / "quotes.csv"
+
+    with file_path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            ["quote", "author", "tags", "page", "scraped_at"]
+        )
+
+        for quote in quotes:
+            writer.writerow(
+                [
+                    quote["quote"],
+                    quote["author"],
+                    ";".join(quote["tags"]),
+                    quote["page"],
+                    quote["scraped_at"],
+                ]
+            )
+
+    return file_path
+
+
+def write_text(quotes):
+    """Write quotes as labelled plain-text blocks."""
+    file_path = OUTPUT_DIR / "quotes.txt"
+
+    with file_path.open("w", encoding="utf-8") as file:
+        for index, quote in enumerate(quotes):
+            if index > 0:
+                file.write("\n")
+
+            file.write(f"Quote: {quote['quote']}\n")
+            file.write(f"Author: {quote['author']}\n")
+            file.write(f"Tags: {', '.join(quote['tags'])}\n")
+            file.write(f"Page: {quote['page']}\n")
+            file.write(f"Scraped: {quote['scraped_at']}\n")
+
+    return file_path
+
+
+def write_json(quotes):
+    """Write quotes as an indented JSON array."""
+    file_path = OUTPUT_DIR / "quotes.json"
+
+    with file_path.open("w", encoding="utf-8") as file:
+        json.dump(quotes, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+
+    return file_path
+
+
+def write_yaml(quotes):
+    """Write quotes as a YAML list of mappings."""
+    file_path = OUTPUT_DIR / "quotes.yaml"
+
+    with file_path.open("w", encoding="utf-8") as file:
+        yaml.safe_dump(
+            quotes,
+            file,
+            allow_unicode=True,
+            sort_keys=False,
+        )
+
+    return file_path
+
 
 def main():
     """Scrape quotes from all available pages."""
@@ -135,9 +209,26 @@ def main():
         # Be polite to the server between requests.
         time.sleep(REQUEST_DELAY)
 
+    
+    # Create the output directory if it does not exist.
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Export the same records to all four formats.
+    files_written = [
+        write_csv(all_quotes),
+        write_text(all_quotes),
+        write_json(all_quotes),
+        write_yaml(all_quotes),
+    ]
+
     print("\nScraping summary:")
     print(f"Pages fetched: {pages_fetched}")
     print(f"Quotes extracted: {len(all_quotes)}")
+    print(f"Files written: {len(files_written)}")
+
+    for file_path in files_written:
+        print(f"  - {file_path.name}")
+
 
 
 if __name__ == "__main__":
